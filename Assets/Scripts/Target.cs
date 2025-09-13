@@ -6,18 +6,41 @@ namespace ShootingSystem
     public class Target : MonoBehaviour, ITarget
     {
         [Header("Target Settings")]
-        [SerializeField] private int maxHealth = 3;
+        [SerializeField] private int maxHealth = 1; // Reduced to 1 for instant destruction
         [SerializeField] private float fallForce = 20f;
         [SerializeField] private float returnToPoolDelay = 5f;
         [SerializeField] private LayerMask groundLayer = 1;
+        [SerializeField] private float boundaryCheckDistance = 30f; // Distance from spawn point to consider out of bounds
         
         private int currentHealth;
         private Rigidbody rb;
         private bool isAlive;
         private bool hasFallen;
         private Coroutine returnToPoolCoroutine;
+        private Vector3 spawnPosition;
+        private bool isOutOfBounds;
         
         public bool IsAlive => isAlive;
+        
+        private void Update()
+        {
+            // Check if target has fallen out of bounds
+            if (isAlive && !isOutOfBounds)
+            {
+                float distanceFromSpawn = Vector3.Distance(transform.position, spawnPosition);
+                if (distanceFromSpawn > boundaryCheckDistance)
+                {
+                    Debug.Log($"Target {name} is out of bounds! Distance: {distanceFromSpawn:F1}m from spawn point");
+                    isOutOfBounds = true;
+                    
+                    // Start return to pool timer for out-of-bounds targets
+                    if (returnToPoolCoroutine == null)
+                    {
+                        returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
+                    }
+                }
+            }
+        }
         
         private void Awake()
         {
@@ -41,6 +64,7 @@ namespace ShootingSystem
         public void Initialize(Vector3 position)
         {
             transform.position = position;
+            spawnPosition = position; // Store spawn position for boundary checking
             ResetTarget();
         }
         
@@ -49,6 +73,7 @@ namespace ShootingSystem
             currentHealth = maxHealth;
             isAlive = true;
             hasFallen = false;
+            isOutOfBounds = false;
             
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -62,16 +87,20 @@ namespace ShootingSystem
         
         public void TakeDamage(int damage)
         {
-            if (!isAlive) return;
+            if (!isAlive) 
+            {
+                Debug.Log($"Target {name} is already dead, ignoring damage");
+                return;
+            }
             
-            Debug.Log($"Target {name} taking {damage} damage. Current health: {currentHealth}");
+            Debug.Log($"🎯 TARGET HIT! {name} taking {damage} damage. Current health: {currentHealth}");
             
             currentHealth -= damage;
             OnHit();
             
             if (currentHealth <= 0)
             {
-                Debug.Log($"Target {name} destroyed!");
+                Debug.Log($"💥 TARGET DESTROYED! {name} is destroyed!");
                 OnDestroyed();
             }
         }
@@ -99,10 +128,13 @@ namespace ShootingSystem
             rb.AddForce(randomDirection * fallForce, ForceMode.Impulse);
             rb.AddTorque(Random.insideUnitSphere * fallForce * 0.5f, ForceMode.Impulse);
             
-            Debug.Log($"Target {name} destroyed and falling!");
+            Debug.Log($"💥 TARGET DESTROYED AND FALLING! {name} destroyed and falling! Force applied: {fallForce}");
             
             // Start return to pool timer
-            returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
+            if (returnToPoolCoroutine == null)
+            {
+                returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
+            }
         }
         
         private IEnumerator ReturnToPoolAfterDelay()

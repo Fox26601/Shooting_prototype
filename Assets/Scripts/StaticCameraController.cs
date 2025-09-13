@@ -162,7 +162,13 @@ namespace ShootingSystem
                 Vector3 shootDirection = cameraTransform.forward;
                 Vector3 shootPosition = firePoint.position;
                 
-                Debug.Log($"Shooting! Direction: {shootDirection}, Position: {shootPosition}");
+                // Calculate where bullet will hit at target distance
+                float targetDistance = 10f; // Distance to targets (further reduced for better accuracy)
+                Vector3 targetHitPoint = shootPosition + shootDirection * targetDistance;
+                
+                Debug.Log($"🎯 SHOOTING! Direction: {shootDirection}, Position: {shootPosition}");
+                Debug.Log($"🎯 Expected hit point at distance {targetDistance}: {targetHitPoint}");
+                Debug.Log($"🎯 Camera forward: {cameraTransform.forward}, Camera position: {cameraTransform.position}");
                 
                 Bullet bullet = BulletPool.Instance.GetBullet();
                 if (bullet != null)

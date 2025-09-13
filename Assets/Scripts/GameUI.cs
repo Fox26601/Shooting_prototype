@@ -7,7 +7,6 @@ namespace ShootingSystem
     public class GameUI : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private TextMeshProUGUI timeText;
         [SerializeField] private TextMeshProUGUI targetsText;
         [SerializeField] private TextMeshProUGUI gameStatusText;
         [SerializeField] private Button restartButton;
@@ -35,13 +34,6 @@ namespace ShootingSystem
         {
             if (gameManager != null)
             {
-                // Update time display
-                if (timeText != null)
-                {
-                    float timeRemaining = gameManager.GameTimeRemaining;
-                    timeText.text = $"Time: {timeRemaining:F1}s";
-                }
-                
                 // Update game status
                 if (gameStatusText != null)
                 {
@@ -53,7 +45,8 @@ namespace ShootingSystem
             if (targetsText != null && targetPool != null)
             {
                 int activeTargets = targetPool.GetActiveTargetCount();
-                targetsText.text = $"Active Targets: {activeTargets}";
+                int maxTargets = gameManager != null ? gameManager.MaxTargets : 5;
+                targetsText.text = $"Active Targets: {activeTargets}/{maxTargets}";
             }
         }
         

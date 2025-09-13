@@ -21,8 +21,7 @@ namespace ShootingSystem.Editor
         private Vector3 spawnerRotation = new Vector3(0, 180f, 0);
         
         [Header("Game Settings")]
-        private int maxTargets = 10;
-        private float gameTime = 60f;
+        private int maxTargets = 5;
         
         [MenuItem("Tools/Shooting System/Setup Scene")]
         public static void ShowWindow()
@@ -56,7 +55,6 @@ namespace ShootingSystem.Editor
             // Game Settings
             GUILayout.Label("Game Settings", EditorStyles.boldLabel);
             maxTargets = EditorGUILayout.IntField("Max Targets", maxTargets);
-            gameTime = EditorGUILayout.FloatField("Game Time (seconds)", gameTime);
             
             GUILayout.Space(20);
             
@@ -148,8 +146,7 @@ namespace ShootingSystem.Editor
             cameraPosition = new Vector3(0, 1.6f, 0);
             spawnerPosition = new Vector3(0, 1f, 0f);
             spawnerRotation = new Vector3(0, 180f, 0);
-            maxTargets = 10;
-            gameTime = 60f;
+            maxTargets = 5;
             
             SetupScene();
         }
@@ -634,15 +631,12 @@ namespace ShootingSystem.Editor
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var maxTargetsField = typeof(GameManager).GetField("maxTargets", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var gameTimeField = typeof(GameManager).GetField("gameTime", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 
                 if (bulletPoolField != null) bulletPoolField.SetValue(gameManager, FindFirstObjectByType<BulletPool>());
                 if (targetPoolField != null) targetPoolField.SetValue(gameManager, FindFirstObjectByType<TargetPool>());
                 if (targetSpawnerField != null) targetSpawnerField.SetValue(gameManager, FindFirstObjectByType<TargetSpawner>());
                 if (cameraControllerField != null) cameraControllerField.SetValue(gameManager, FindFirstObjectByType<StaticCameraController>());
                 if (maxTargetsField != null) maxTargetsField.SetValue(gameManager, maxTargets);
-                if (gameTimeField != null) gameTimeField.SetValue(gameManager, gameTime);
             }
             
             // Link GameUI references

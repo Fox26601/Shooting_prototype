@@ -6,8 +6,7 @@ namespace ShootingSystem
     {
         [Header("Game Settings")]
         [SerializeField] private bool autoStartGame = true;
-        [SerializeField] private float gameTime = 60f;
-        [SerializeField] private int maxTargets = 10;
+        [SerializeField] private int maxTargets = 5;
         
         [Header("References")]
         [SerializeField] private BulletPool bulletPool;
@@ -16,12 +15,10 @@ namespace ShootingSystem
         [SerializeField] private StaticCameraController cameraController;
         
         private bool isGameActive;
-        private float currentGameTime;
         
         public static GameManager Instance { get; private set; }
         
         public bool IsGameActive => isGameActive;
-        public float GameTimeRemaining => Mathf.Max(0f, gameTime - currentGameTime);
         public int MaxTargets => maxTargets;
         
         private void Awake()
@@ -47,15 +44,7 @@ namespace ShootingSystem
         
         private void Update()
         {
-            if (isGameActive)
-            {
-                currentGameTime += Time.deltaTime;
-                
-                if (currentGameTime >= gameTime)
-                {
-                    EndGame();
-                }
-            }
+            // Timer removed - game runs indefinitely
         }
         
         private void InitializeGame()
@@ -79,7 +68,6 @@ namespace ShootingSystem
             if (isGameActive) return;
             
             isGameActive = true;
-            currentGameTime = 0f;
             
             // Start spawning targets
             if (targetSpawner != null)
@@ -113,7 +101,7 @@ namespace ShootingSystem
                 targetPool.ReturnAllTargets();
             }
             
-            Debug.Log($"Game Ended! Time: {currentGameTime:F1}s");
+            Debug.Log("Game Ended!");
         }
         
         public void RestartGame()

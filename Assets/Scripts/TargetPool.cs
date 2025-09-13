@@ -95,7 +95,17 @@ namespace ShootingSystem
             target.gameObject.SetActive(true);
             activeTargets.Add(target);
             
-            Debug.Log($"Target retrieved from pool at position: {position}. Pool size: {targetPool.Count}, Active targets: {activeTargets.Count}");
+            // Check if target has proper collider
+            Collider targetCollider = target.GetComponent<Collider>();
+            if (targetCollider != null)
+            {
+                Debug.Log($"✅ Target retrieved from pool at position: {position}. Has collider: {targetCollider.name}, isTrigger: {targetCollider.isTrigger}. Pool size: {targetPool.Count}, Active targets: {activeTargets.Count}");
+            }
+            else
+            {
+                Debug.LogError($"❌ Target retrieved from pool at position: {position} but has NO COLLIDER! Pool size: {targetPool.Count}, Active targets: {activeTargets.Count}");
+            }
+            
             return target;
         }
         

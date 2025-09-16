@@ -6,9 +6,6 @@ namespace ShootingSystem
     public class TargetSpawner : MonoBehaviour
     {
         [Header("Spawn Settings")]
-        [SerializeField] private float spawnDistance = 10f; // Further reduced distance for easier targeting
-        [SerializeField] private float spawnHeight = 1f;
-        [SerializeField] private float spawnInterval = 2f;
         [SerializeField] private int maxTargetsPerSpawn = 5; // Spawn all targets in one row
         [SerializeField] private float targetSpacing = 2.5f;
         
@@ -40,7 +37,8 @@ namespace ShootingSystem
             if (isSpawning) return;
             
             isSpawning = true;
-            spawnCoroutine = StartCoroutine(SpawnTargetsCoroutine());
+            // Spawn initial targets immediately
+            SpawnTargets();
         }
         
         public void StopSpawning()
@@ -55,18 +53,22 @@ namespace ShootingSystem
             }
         }
         
-        private IEnumerator SpawnTargetsCoroutine()
+        public void CheckAndRespawnTargets()
         {
-            while (isSpawning)
+            if (GameManager.Instance != null && TargetPool.Instance != null)
             {
-                yield return new WaitForSeconds(spawnInterval);
+                int currentTargets = TargetPool.Instance.GetActiveTargetCount();
+                int maxTargets = GameManager.Instance.MaxTargets;
                 
-                if (TargetPool.Instance != null && cameraTransform != null)
+                // If no targets, spawn immediately
+                if (currentTargets == 0)
                 {
-                    SpawnTargets();
+                    Debug.Log($"🎯 No targets left! Spawning {maxTargets} targets immediately");
+                    SpawnTargetsInLine(maxTargets);
                 }
             }
         }
+        
         
         private void SpawnTargets()
         {
@@ -134,24 +136,11 @@ namespace ShootingSystem
         
         private Vector3 GetSpawnPosition()
         {
-            if (cameraTransform == null) return transform.position;
+            // Always use fixed spawn position for consistency
+            // This ensures targets spawn in the same position every time
+            Vector3 spawnPosition = new Vector3(0f, 0.7f, -10f);
             
-            // Get camera position
-            Vector3 cameraPosition = cameraTransform.position;
-            
-            // Always spawn targets in front of camera (negative Z direction)
-            // This ensures consistent positioning regardless of camera rotation
-            // Force spawnDistance to be 10 for closer targets
-            float actualSpawnDistance = 10f;
-            Vector3 spawnPosition = cameraPosition + Vector3.forward * (-actualSpawnDistance);
-            spawnPosition.y = cameraPosition.y + spawnHeight; // Keep relative to camera height
-            
-            // Round to avoid floating point precision issues
-            spawnPosition.x = Mathf.Round(spawnPosition.x * 100f) / 100f;
-            spawnPosition.y = Mathf.Round(spawnPosition.y * 100f) / 100f;
-            spawnPosition.z = Mathf.Round(spawnPosition.z * 100f) / 100f;
-            
-            Debug.Log($"🎯 Spawn position calculated: Camera pos: {cameraPosition}, Fixed forward: Vector3.forward * (-{actualSpawnDistance}), Spawn pos: {spawnPosition}");
+            Debug.Log($"🎯 Fixed spawn position: {spawnPosition}");
             
             return spawnPosition;
         }
@@ -178,7 +167,7 @@ namespace ShootingSystem
             
             // Draw spawn distance sphere
             Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(cameraTransform.position, spawnDistance);
+            Gizmos.DrawWireSphere(cameraTransform.position, 10f);
             
             // Draw target positions preview
             Gizmos.color = Color.green;

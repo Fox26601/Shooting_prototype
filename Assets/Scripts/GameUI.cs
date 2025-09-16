@@ -9,6 +9,8 @@ namespace ShootingSystem
         [Header("UI References")]
         [SerializeField] private TextMeshProUGUI targetsText;
         [SerializeField] private TextMeshProUGUI gameStatusText;
+        [SerializeField] private TextMeshProUGUI timerText;
+        [SerializeField] private TextMeshProUGUI scoreText;
         [SerializeField] private Button restartButton;
         
         private GameManager gameManager;
@@ -37,7 +39,39 @@ namespace ShootingSystem
                 // Update game status
                 if (gameStatusText != null)
                 {
-                    gameStatusText.text = gameManager.IsGameActive ? "Game Active" : "Game Over";
+                    if (gameManager.GameEnded)
+                    {
+                        if (gameManager.CurrentScore == 0)
+                        {
+                            gameStatusText.text = "LOSE GAME!";
+                            gameStatusText.color = Color.red;
+                        }
+                        else
+                        {
+                            gameStatusText.text = $"WIN GAME! Score: {gameManager.CurrentScore}";
+                            gameStatusText.color = Color.green;
+                        }
+                    }
+                    else
+                    {
+                        gameStatusText.text = gameManager.IsGameActive ? "Game Active" : "Game Over";
+                        gameStatusText.color = Color.white;
+                    }
+                }
+                
+                // Update timer
+                if (timerText != null)
+                {
+                    float timeRemaining = gameManager.GameTimeRemaining;
+                    int minutes = Mathf.FloorToInt(timeRemaining / 60f);
+                    int seconds = Mathf.FloorToInt(timeRemaining % 60f);
+                    timerText.text = $"Time: {minutes:00}:{seconds:00}";
+                }
+                
+                // Update score
+                if (scoreText != null)
+                {
+                    scoreText.text = $"Score: {gameManager.CurrentScore}";
                 }
             }
             

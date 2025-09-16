@@ -33,18 +33,45 @@ namespace ShootingSystem
         {
             if (targetPrefab == null)
             {
-#if UNITY_EDITOR
-                targetPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Target Prefab.prefab");
-                if (targetPrefab != null)
+                // Try to load prefab from Resources folder (works in build)
+                targetPrefab = Resources.Load<GameObject>("Prefabs/Target Prefab");
+                
+                if (targetPrefab == null)
                 {
-                    Debug.Log("✅ Target prefab loaded from Assets/Prefabs/");
+                    // Fallback: create target prefab at runtime
+                    Debug.LogWarning("⚠️ Target prefab not found in Resources. Creating runtime prefab...");
+                    targetPrefab = CreateTargetPrefabRuntime();
                 }
                 else
                 {
-                    Debug.LogError("❌ Target prefab not found at Assets/Prefabs/Target Prefab.prefab");
+                    Debug.Log("✅ Target prefab loaded from Resources");
                 }
-#endif
             }
+        }
+        
+        private GameObject CreateTargetPrefabRuntime()
+        {
+            GameObject target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            target.name = "Target Prefab";
+            target.transform.localScale = new Vector3(1f, 2f, 0.2f);
+            
+            // Add Rigidbody
+            Rigidbody rb = target.AddComponent<Rigidbody>();
+            rb.useGravity = true;
+            rb.mass = 1f;
+            
+            // Add Target script
+            target.AddComponent<Target>();
+            
+            // Add collider
+            Collider collider = target.GetComponent<Collider>();
+            collider.isTrigger = false;
+            
+            // Set material
+            Renderer renderer = target.GetComponent<Renderer>();
+            renderer.material.color = Color.red;
+            
+            return target;
         }
         
         private void InitializePool()

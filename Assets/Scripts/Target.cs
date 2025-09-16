@@ -8,7 +8,6 @@ namespace ShootingSystem
         [Header("Target Settings")]
         [SerializeField] private int maxHealth = 1; // Reduced to 1 for instant destruction
         [SerializeField] private float fallForce = 20f;
-        [SerializeField] private float returnToPoolDelay = 5f;
         [SerializeField] private LayerMask groundLayer = 1;
         [SerializeField] private float boundaryCheckDistance = 30f; // Distance from spawn point to consider out of bounds
         
@@ -33,11 +32,8 @@ namespace ShootingSystem
                     Debug.Log($"Target {name} is out of bounds! Distance: {distanceFromSpawn:F1}m from spawn point");
                     isOutOfBounds = true;
                     
-                    // Start return to pool timer for out-of-bounds targets
-                    if (returnToPoolCoroutine == null)
-                    {
-                        returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
-                    }
+                    // Return to pool immediately for out-of-bounds targets
+                    ReturnToPool();
                 }
             }
         }
@@ -96,6 +92,12 @@ namespace ShootingSystem
             Debug.Log($"🎯 TARGET HIT! {name} taking {damage} damage. Current health: {currentHealth}");
             
             currentHealth -= damage;
+            
+            // Add score when target is hit
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.AddScore(10); // 10 points per hit
+            }
             OnHit();
             
             if (currentHealth <= 0)
@@ -130,18 +132,10 @@ namespace ShootingSystem
             
             Debug.Log($"💥 TARGET DESTROYED AND FALLING! {name} destroyed and falling! Force applied: {fallForce}");
             
-            // Start return to pool timer
-            if (returnToPoolCoroutine == null)
-            {
-                returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
-            }
-        }
-        
-        private IEnumerator ReturnToPoolAfterDelay()
-        {
-            yield return new WaitForSeconds(returnToPoolDelay);
+            // Return to pool immediately for instant respawn
             ReturnToPool();
         }
+        
         
         private void ReturnToPool()
         {
@@ -153,17 +147,21 @@ namespace ShootingSystem
             
             gameObject.SetActive(false);
             TargetPool.Instance?.ReturnTarget(this);
+            
+            // Check if we need to respawn targets immediately
+            var targetSpawner = FindFirstObjectByType<TargetSpawner>();
+            if (targetSpawner != null)
+            {
+                targetSpawner.CheckAndRespawnTargets();
+            }
         }
         
         private void OnTriggerEnter(Collider other)
         {
             if (hasFallen && other.gameObject.layer == Mathf.RoundToInt(Mathf.Log(groundLayer.value, 2)))
             {
-                // Target hit the ground, start return timer
-                if (returnToPoolCoroutine == null)
-                {
-                    returnToPoolCoroutine = StartCoroutine(ReturnToPoolAfterDelay());
-                }
+                // Target hit the ground, return to pool immediately
+                ReturnToPool();
             }
         }
     }

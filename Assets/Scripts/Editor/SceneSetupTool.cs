@@ -115,6 +115,9 @@ namespace ShootingSystem.Editor
             // Check and create game manager
             CheckAndCreateGameManager();
             
+            // Check and create restart button
+            CheckAndCreateRestartButton();
+            
             // Link all references
             LinkAllReferences();
             
@@ -389,7 +392,7 @@ namespace ShootingSystem.Editor
                 TextMeshProUGUI statusText = statusObj.AddComponent<TextMeshProUGUI>();
                 statusText.text = "Game Active";
                 statusText.fontSize = 32;
-                statusText.color = Color.green;
+                statusText.color = Color.white;
                 
                 RectTransform statusRect = statusObj.GetComponent<RectTransform>();
                 statusRect.anchorMin = new Vector2(0.5f, 1);
@@ -397,6 +400,23 @@ namespace ShootingSystem.Editor
                 statusRect.anchoredPosition = new Vector2(0, -30);
                 statusRect.sizeDelta = new Vector2(200, 50);
                 return statusObj;
+            });
+            
+            // Create score display
+            CreateUIElementIfNotExists(canvas, "Score Text", () => {
+                GameObject scoreObj = new GameObject("Score Text");
+                scoreObj.transform.SetParent(canvas.transform);
+                TextMeshProUGUI scoreText = scoreObj.AddComponent<TextMeshProUGUI>();
+                scoreText.text = "Score: 0";
+                scoreText.fontSize = 24;
+                scoreText.color = Color.yellow;
+                
+                RectTransform scoreRect = scoreObj.GetComponent<RectTransform>();
+                scoreRect.anchorMin = new Vector2(0, 1);
+                scoreRect.anchorMax = new Vector2(0, 1);
+                scoreRect.anchoredPosition = new Vector2(100, -130);
+                scoreRect.sizeDelta = new Vector2(200, 50);
+                return scoreObj;
             });
             
             // Create restart button
@@ -605,8 +625,8 @@ namespace ShootingSystem.Editor
                 var lineLengthField = typeof(TargetSpawner).GetField("lineLength", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 
-                if (spawnDistanceField != null) spawnDistanceField.SetValue(spawner, 20f);
-                if (spawnHeightField != null) spawnHeightField.SetValue(spawner, 1f);
+                if (spawnDistanceField != null) spawnDistanceField.SetValue(spawner, 10f);
+                if (spawnHeightField != null) spawnHeightField.SetValue(spawner, 0.5f);
                 if (maxTargetsPerSpawnField != null) maxTargetsPerSpawnField.SetValue(spawner, 5);
                 if (targetSpacingField != null) targetSpacingField.SetValue(spawner, 2.5f);
                 if (lineLengthField != null) lineLengthField.SetValue(spawner, 10f);
@@ -643,11 +663,13 @@ namespace ShootingSystem.Editor
             GameUI gameUI = FindFirstObjectByType<GameUI>();
             if (gameUI != null)
             {
-                var timeTextField = typeof(GameUI).GetField("timeText", 
+                var timeTextField = typeof(GameUI).GetField("timerText", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var targetsTextField = typeof(GameUI).GetField("targetsText", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var gameStatusTextField = typeof(GameUI).GetField("gameStatusText", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var scoreTextField = typeof(GameUI).GetField("scoreText", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var restartButtonField = typeof(GameUI).GetField("restartButton", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -655,8 +677,85 @@ namespace ShootingSystem.Editor
                 if (timeTextField != null) timeTextField.SetValue(gameUI, GameObject.Find("Time Text")?.GetComponent<TextMeshProUGUI>());
                 if (targetsTextField != null) targetsTextField.SetValue(gameUI, GameObject.Find("Targets Text")?.GetComponent<TextMeshProUGUI>());
                 if (gameStatusTextField != null) gameStatusTextField.SetValue(gameUI, GameObject.Find("Status Text")?.GetComponent<TextMeshProUGUI>());
+                if (scoreTextField != null) scoreTextField.SetValue(gameUI, GameObject.Find("Score Text")?.GetComponent<TextMeshProUGUI>());
                 if (restartButtonField != null) restartButtonField.SetValue(gameUI, GameObject.Find("Restart Button")?.GetComponent<Button>());
             }
+        }
+        
+        private void CheckAndCreateRestartButton()
+        {
+            GameObject restartButtonObj = GameObject.Find("Restart Button Spawner");
+            if (restartButtonObj == null)
+            {
+                // Create restart button spawner
+                restartButtonObj = new GameObject("Restart Button Spawner");
+                RestartButtonSpawner spawner = restartButtonObj.AddComponent<RestartButtonSpawner>();
+                
+                // Try to load existing prefab from Resources
+                GameObject buttonPrefab = Resources.Load<GameObject>("Prefabs/Restart Button Prefab");
+                
+                if (buttonPrefab == null)
+                {
+                    Debug.LogWarning("⚠️ Restart Button Prefab not found in Resources/Prefabs/. Creating runtime prefab...");
+                    buttonPrefab = CreateRestartButtonPrefab();
+                }
+                else
+                {
+                    Debug.Log("✅ Restart Button Prefab loaded from Resources/Prefabs/");
+                }
+                
+                // Set prefab reference
+                var prefabField = typeof(RestartButtonSpawner).GetField("restartButtonPrefab", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (prefabField != null) prefabField.SetValue(spawner, buttonPrefab);
+                
+                // Set camera reference
+                var cameraField = typeof(RestartButtonSpawner).GetField("cameraTransform", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (cameraField != null) cameraField.SetValue(spawner, Camera.main?.transform);
+                
+                Debug.Log("✅ Restart Button Spawner created");
+            }
+            else
+            {
+                Debug.Log("ℹ️ Restart Button Spawner already exists, skipping creation");
+            }
+        }
+        
+        private GameObject CreateRestartButtonPrefab()
+        {
+            // Create restart button prefab
+            GameObject buttonPrefab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            buttonPrefab.name = "Restart Button Prefab";
+            buttonPrefab.transform.localScale = new Vector3(1f, 0.5f, 0.2f);
+            
+            // Set bright red color
+            Renderer renderer = buttonPrefab.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Material material = new Material(Shader.Find("Standard"));
+                material.color = new Color(1f, 0f, 0f, 1f); // Pure bright red
+                material.SetFloat("_Metallic", 0f);
+                material.SetFloat("_Smoothness", 0.1f); // Less shiny
+                renderer.material = material;
+            }
+            
+            // Add collider (should be trigger for bullet detection)
+            Collider collider = buttonPrefab.GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.isTrigger = true;
+            }
+            
+            // Add RestartButton script
+            buttonPrefab.AddComponent<RestartButton>();
+            
+            // Add tag for bullet detection
+            buttonPrefab.tag = "RestartButton";
+            
+            Debug.Log("✅ Restart Button Prefab created");
+            
+            return buttonPrefab;
         }
     }
 }

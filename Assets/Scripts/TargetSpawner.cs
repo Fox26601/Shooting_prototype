@@ -8,6 +8,7 @@ namespace ShootingSystem
         [Header("Spawn Settings")]
         [SerializeField] private int maxTargetsPerSpawn = 5; // Spawn all targets in one row
         [SerializeField] private float targetSpacing = 2.5f;
+        [SerializeField] private float respawnDelay = 1f; // Delay before respawning new targets
         
         [Header("Line Spawn")]
         [SerializeField] private float lineLength = 10f;
@@ -16,6 +17,7 @@ namespace ShootingSystem
         [SerializeField] private Transform cameraTransform;
         
         private Coroutine spawnCoroutine;
+        private Coroutine respawnDelayCoroutine;
         private bool isSpawning;
         
         private void Start()
@@ -51,6 +53,12 @@ namespace ShootingSystem
                 StopCoroutine(spawnCoroutine);
                 spawnCoroutine = null;
             }
+            
+            if (respawnDelayCoroutine != null)
+            {
+                StopCoroutine(respawnDelayCoroutine);
+                respawnDelayCoroutine = null;
+            }
         }
         
         public void CheckAndRespawnTargets()
@@ -60,13 +68,35 @@ namespace ShootingSystem
                 int currentTargets = TargetPool.Instance.GetActiveTargetCount();
                 int maxTargets = GameManager.Instance.MaxTargets;
                 
-                // If no targets, spawn immediately
+                // If no targets, spawn with delay
                 if (currentTargets == 0)
                 {
-                    Debug.Log($"🎯 No targets left! Spawning {maxTargets} targets immediately");
-                    SpawnTargetsInLine(maxTargets);
+                    Debug.Log($"🎯 No targets left! Starting {respawnDelay}s delay before spawning {maxTargets} targets");
+                    StartRespawnDelay(maxTargets);
                 }
             }
+        }
+        
+        private void StartRespawnDelay(int targetCount)
+        {
+            // Stop any existing respawn delay coroutine
+            if (respawnDelayCoroutine != null)
+            {
+                StopCoroutine(respawnDelayCoroutine);
+            }
+            
+            respawnDelayCoroutine = StartCoroutine(RespawnDelayCoroutine(targetCount));
+        }
+        
+        private IEnumerator RespawnDelayCoroutine(int targetCount)
+        {
+            Debug.Log($"⏰ Waiting {respawnDelay} seconds before respawning {targetCount} targets...");
+            yield return new WaitForSeconds(respawnDelay);
+            
+            Debug.Log($"🎯 Respawn delay completed! Spawning {targetCount} targets now");
+            SpawnTargetsInLine(targetCount);
+            
+            respawnDelayCoroutine = null;
         }
         
         

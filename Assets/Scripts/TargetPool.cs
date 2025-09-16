@@ -53,12 +53,15 @@ namespace ShootingSystem
         {
             GameObject target = GameObject.CreatePrimitive(PrimitiveType.Cube);
             target.name = "Target Prefab";
-            target.transform.localScale = new Vector3(1f, 2f, 0.2f);
+            // Make target thicker to prevent falling - increased depth from 0.2f to 1f
+            target.transform.localScale = new Vector3(1f, 2f, 1f);
             
             // Add Rigidbody
             Rigidbody rb = target.AddComponent<Rigidbody>();
             rb.useGravity = true;
-            rb.mass = 1f;
+            rb.mass = 2f; // Increased mass for stability
+            rb.linearDamping = 0.5f; // Add damping to reduce bouncing
+            rb.angularDamping = 0.5f;
             
             // Add Target script
             target.AddComponent<Target>();
@@ -143,6 +146,22 @@ namespace ShootingSystem
                 activeTargets.Remove(target);
                 targetPool.Enqueue(target);
             }
+        }
+        
+        public void RemoveFromActiveCount(Target target)
+        {
+            if (activeTargets.Contains(target))
+            {
+                activeTargets.Remove(target);
+                Debug.Log($"🎯 Target {target.name} removed from active count immediately. Active targets: {activeTargets.Count}");
+            }
+        }
+        
+        public void AddToPool(Target target)
+        {
+            // Add target back to pool without affecting active count
+            targetPool.Enqueue(target);
+            Debug.Log($"🎯 Target {target.name} added back to pool after delay. Pool size: {targetPool.Count}");
         }
         
         public void ReturnAllTargets()

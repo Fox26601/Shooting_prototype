@@ -6,7 +6,7 @@ namespace ShootingSystem
     public class Bullet : MonoBehaviour
     {
         [Header("Bullet Settings")]
-        [SerializeField] private float speed = 15f; // Further reduced speed to ensure targets are hit
+        [SerializeField] private float speed = 25f; // Increased speed for faster bullet travel
         [SerializeField] private float lifetime = 10f; // Increased lifetime to reach targets
         [SerializeField] private int damage = 3; // Increased damage to destroy targets in one hit
         [SerializeField] private float hitReturnDelay = 5f; // Delay before returning to pool after hit
@@ -37,8 +37,8 @@ namespace ShootingSystem
             // Force damage to be 3 for instant target destruction
             damage = 3;
             
-            // Force speed to be 15 to ensure targets are hit
-            speed = 15f;
+            // Force speed to be 25 for faster bullet travel
+            speed = 25f;
         }
         
         private void Update()
@@ -103,6 +103,15 @@ namespace ShootingSystem
         {
             Debug.Log($"🔍 OnTriggerEnter called! Bullet active: {isActive}, hasHitTarget: {hasHitTarget}, Hit object: {other.gameObject.name}");
             
+            // Handle restart button triggers immediately
+            var restartButton = other.GetComponent<RestartButton>();
+            if (restartButton != null)
+            {
+                Debug.Log("🔴 Bullet hit Restart Button trigger");
+                ReturnToPool();
+                return;
+            }
+            
             if (!isActive || hasHitTarget) return;
             
             GameObject hitObject = other.gameObject;
@@ -114,6 +123,9 @@ namespace ShootingSystem
             {
                 Debug.Log($"🎯 TARGET HIT! Dealing {damage} damage to {hitObject.name}");
                 target.TakeDamage(damage);
+                
+                // Play target hit sound effect
+                AudioManager.Instance?.PlayTargetHitSound();
                 
                 // Apply physical impact to target (simplified for trigger)
                 ApplyImpactToTarget(hitObject);
@@ -130,6 +142,9 @@ namespace ShootingSystem
             }
             else
             {
+                // Play bullet impact sound when hitting non-target objects
+                AudioManager.Instance?.PlayBulletImpactSound();
+                
                 Debug.Log($"❌ No ITarget component found on {hitObject.name}. Returning to pool immediately.");
                 // For non-target objects, return immediately
                 ReturnToPool();
@@ -150,6 +165,9 @@ namespace ShootingSystem
                 Debug.Log($"Target found! Dealing {damage} damage to {hitObject.name}");
                 target.TakeDamage(damage);
                 
+                // Play target hit sound effect
+                AudioManager.Instance?.PlayTargetHitSound();
+                
                 // Apply physical impact to target
                 ApplyImpactToTarget(collision, hitObject);
                 
@@ -165,6 +183,9 @@ namespace ShootingSystem
             }
             else
             {
+                // Play bullet impact sound when hitting non-target objects
+                AudioManager.Instance?.PlayBulletImpactSound();
+                
                 Debug.Log($"No ITarget component found on {hitObject.name}. Returning to pool immediately.");
                 // For non-target objects, return immediately
                 ReturnToPool();

@@ -7,10 +7,12 @@ namespace ShootingSystem
     {
         [Header("Camera Settings")]
         [SerializeField] private Transform firePoint;
-        [SerializeField] private float mouseSensitivity = 1.5f;
+        [SerializeField] private float mouseSensitivityX = 0.6f; // Horizontal sensitivity (lower = less sensitive)
+        [SerializeField] private float mouseSensitivityY = 0.4f; // Vertical sensitivity (even less sensitive)
         [SerializeField] private float maxLookAngle = 80f;
-        [SerializeField] private float smoothing = 5f;
+        [SerializeField] private float smoothing = 8f; // Increased for smoother movement
         [SerializeField] private bool invertY = false;
+        
         
         [Header("FOV Settings")]
         [SerializeField] private float normalFOV = 60f;
@@ -21,10 +23,22 @@ namespace ShootingSystem
         [SerializeField] private Transform cameraTransform;
         [SerializeField] private Camera playerCamera;
         
+        [Header("Reload System")]
+        [SerializeField] private int maxAmmo = 5;
+        [SerializeField] private float reloadTime = 2f;
+        
         private float xRotation = 0f;
         private float yRotation = 0f;
         private bool attackInput;
         private bool isAiming = false;
+        
+        // Reload system variables
+        private int currentAmmo;
+        private bool isReloading = false;
+        private float reloadTimer = 0f;
+        
+        // UI reference
+        private AmmoUI ammoUI;
         
         // Smoothing variables
         private float currentMouseX;
@@ -90,6 +104,9 @@ namespace ShootingSystem
                 playerCamera.fieldOfView = normalFOV;
             }
             
+            // Face the targets at scene start (assumes targets are on negative Z)
+            AlignToTargetsDirection();
+
             // Initialize rotations
             Vector3 currentRotation = transform.eulerAngles;
             yRotation = currentRotation.y;
@@ -98,12 +115,62 @@ namespace ShootingSystem
             // Clamp initial X rotation
             if (xRotation > 180f)
                 xRotation -= 360f;
+            
+            // Initialize reload system
+            currentAmmo = maxAmmo;
+            Debug.Log($"🔫 Ammo system initialized: {currentAmmo}/{maxAmmo} bullets");
+            
+            // Find AmmoUI
+            ammoUI = FindFirstObjectByType<AmmoUI>();
+            if (ammoUI != null)
+            {
+                Debug.Log("✅ AmmoUI found and connected");
+            }
+        }
+
+        private void AlignToTargetsDirection()
+        {
+            // Compute yaw/pitch to look towards world Z = -10 (targets line) from current position
+            Vector3 cameraPos = cameraTransform.position;
+            Vector3 targetPos = new Vector3(0f, cameraPos.y, -10f);
+            Vector3 dir = (targetPos - cameraPos).normalized;
+
+            // Horizontal yaw
+            Vector3 dirXZ = new Vector3(dir.x, 0f, dir.z).normalized;
+            float yaw = dirXZ.sqrMagnitude > 0f ? Mathf.Atan2(dirXZ.x, dirXZ.z) * Mathf.Rad2Deg : 0f;
+
+            // Vertical pitch
+            float pitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+
+            if (cameraTransform != transform)
+            {
+                transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            }
+            else
+            {
+                cameraTransform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+            }
+
+            // Seed smoothing targets so Update starts from this facing
+            currentMouseX = targetMouseX = yaw;
+            currentMouseY = targetMouseY = pitch;
         }
         
         private void Update()
         {
             HandleMouseLook();
             HandleFOV();
+            HandleReload();
+            // Fallback shooting input (in case Input System binding fails)
+#if ENABLE_INPUT_SYSTEM
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                attackInput = true;
+            }
+#else
+            if (Input.GetMouseButtonDown(0)) attackInput = true;
+#endif
             HandleShooting();
         }
         
@@ -112,8 +179,8 @@ namespace ShootingSystem
             Vector2 lookInput = lookAction.ReadValue<Vector2>();
             
             // Apply sensitivity and invert Y if needed
-            float mouseX = lookInput.x * mouseSensitivity;
-            float mouseY = lookInput.y * mouseSensitivity;
+            float mouseX = lookInput.x * mouseSensitivityX;
+            float mouseY = lookInput.y * mouseSensitivityY;
             
             if (invertY)
                 mouseY = -mouseY;
@@ -155,33 +222,103 @@ namespace ShootingSystem
             playerCamera.fieldOfView = newFOV;
         }
         
+        private void HandleReload()
+        {
+            if (isReloading)
+            {
+                reloadTimer += Time.deltaTime;
+                
+                if (reloadTimer >= reloadTime)
+                {
+                    // Reload complete
+                    currentAmmo = maxAmmo;
+                    isReloading = false;
+                    reloadTimer = 0f;
+                    Debug.Log($"🔫 Reload complete! Ammo: {currentAmmo}/{maxAmmo}");
+                }
+                
+                // Update UI
+                UpdateAmmoUI();
+            }
+        }
+        
+        private void UpdateAmmoUI()
+        {
+            if (ammoUI != null)
+            {
+                float reloadProgress = isReloading ? (reloadTimer / reloadTime) : 0f;
+                ammoUI.UpdateAmmoDisplay(currentAmmo, maxAmmo, isReloading, reloadProgress);
+            }
+        }
+        
         private void HandleShooting()
         {
-            if (attackInput && BulletPool.Instance != null)
+            if (attackInput && BulletPool.Instance != null && !isReloading)
             {
-                Vector3 shootDirection = cameraTransform.forward;
-                Vector3 shootPosition = firePoint.position;
-                
-                // Calculate where bullet will hit at target distance
-                float targetDistance = 10f; // Distance to targets (further reduced for better accuracy)
-                Vector3 targetHitPoint = shootPosition + shootDirection * targetDistance;
-                
-                Debug.Log($"🎯 SHOOTING! Direction: {shootDirection}, Position: {shootPosition}");
-                Debug.Log($"🎯 Expected hit point at distance {targetDistance}: {targetHitPoint}");
-                Debug.Log($"🎯 Camera forward: {cameraTransform.forward}, Camera position: {cameraTransform.position}");
-                
-                Bullet bullet = BulletPool.Instance.GetBullet();
-                if (bullet != null)
+                if (currentAmmo > 0)
                 {
-                    bullet.Fire(shootDirection, shootPosition);
-                    Debug.Log("Bullet fired successfully!");
+                    Vector3 shootDirection = cameraTransform.forward;
+                    Vector3 shootPosition = firePoint.position;
+                    
+                    // Calculate where bullet will hit at target distance
+                    float targetDistance = 10f; // Distance to targets (further reduced for better accuracy)
+                    Vector3 targetHitPoint = shootPosition + shootDirection * targetDistance;
+                    
+                    Debug.Log($"🎯 SHOOTING! Direction: {shootDirection}, Position: {shootPosition}");
+                    Debug.Log($"🎯 Expected hit point at distance {targetDistance}: {targetHitPoint}");
+                    Debug.Log($"🎯 Camera forward: {cameraTransform.forward}, Camera position: {cameraTransform.position}");
+                    
+                    Bullet bullet = BulletPool.Instance.GetBullet();
+                    if (bullet != null)
+                    {
+                        bullet.Fire(shootDirection, shootPosition);
+                        
+                        // Play shooting sound effect
+                        AudioManager.Instance?.PlayShootingSound();
+                        
+                        // Consume ammo
+                        currentAmmo--;
+                        Debug.Log($"🔫 Shot fired! Ammo: {currentAmmo}/{maxAmmo}");
+                        
+                        // Update UI
+                        UpdateAmmoUI();
+                        
+                        // Start reload if out of ammo
+                        if (currentAmmo <= 0)
+                        {
+                            StartReload();
+                        }
+                        
+                        Debug.Log("Bullet fired successfully!");
+                    }
+                    else
+                    {
+                        Debug.LogError("Failed to get bullet from pool!");
+                    }
                 }
                 else
                 {
-                    Debug.LogError("Failed to get bullet from pool!");
+                    Debug.Log("🔫 Out of ammo! Reloading...");
+                    StartReload();
                 }
                 
                 attackInput = false;
+            }
+        }
+        
+        private void StartReload()
+        {
+            if (!isReloading)
+            {
+                isReloading = true;
+                reloadTimer = 0f;
+                Debug.Log($"🔫 Starting reload... {reloadTime}s");
+                
+                // Play reload sound
+                AudioManager.Instance?.PlayReloadSound();
+                
+                // Update UI
+                UpdateAmmoUI();
             }
         }
         
@@ -195,14 +332,47 @@ namespace ShootingSystem
             return isAiming;
         }
         
+        // Public methods for AmmoUI access
+        public int GetCurrentAmmo()
+        {
+            return currentAmmo;
+        }
+        
+        public int GetMaxAmmo()
+        {
+            return maxAmmo;
+        }
+        
+        public bool IsReloading()
+        {
+            return isReloading;
+        }
+        
+        public float GetReloadProgress()
+        {
+            return isReloading ? (reloadTimer / reloadTime) : 0f;
+        }
+        
         public void SetMouseSensitivity(float sensitivity)
         {
-            mouseSensitivity = Mathf.Clamp(sensitivity, 0.1f, 5f);
+            float clamped = Mathf.Clamp(sensitivity, 0.1f, 5f);
+            mouseSensitivityX = clamped;
+            mouseSensitivityY = clamped * 0.7f;
         }
         
         public float GetMouseSensitivity()
         {
-            return mouseSensitivity;
+            return (mouseSensitivityX + mouseSensitivityY) * 0.5f;
+        }
+
+        public void SetMouseSensitivityX(float sensitivity)
+        {
+            mouseSensitivityX = Mathf.Clamp(sensitivity, 0.05f, 5f);
+        }
+
+        public void SetMouseSensitivityY(float sensitivity)
+        {
+            mouseSensitivityY = Mathf.Clamp(sensitivity, 0.05f, 5f);
         }
         
         // Input callbacks

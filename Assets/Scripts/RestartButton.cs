@@ -11,6 +11,7 @@ namespace ShootingSystem
         
         private Renderer buttonRenderer;
         private bool isHit;
+        private bool isArmed;
         
         private void Awake()
         {
@@ -29,31 +30,67 @@ namespace ShootingSystem
                 material.SetFloat("_Smoothness", 0.1f);
                 buttonRenderer.material = material;
             }
+            
+            // Ensure collider is properly configured for fast bullets
+            Collider collider = GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.isTrigger = true;
+                // Increase collider size for better detection with fast bullets
+                if (collider is BoxCollider boxCollider)
+                {
+                    boxCollider.size = new Vector3(3f, 1.2f, 3f);
+                    boxCollider.center = new Vector3(0f, 0.6f, 1.5f);
+                }
+            }
+
+            // Ensure there is a Rigidbody for trigger callbacks reliability
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = gameObject.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            }
+            
+            isArmed = false;
+            Invoke(nameof(ArmTrigger), 0.05f);
+        }
+        
+        private void ArmTrigger()
+        {
+            isArmed = true;
         }
         
         private void OnTriggerEnter(Collider other)
         {
-            if (isHit) return;
+            if (isHit || !isArmed) return;
             
             // Check if hit by bullet (check component instead of tag)
+            Bullet bullet = other.GetComponent<Bullet>();
+            if (bullet != null)
+            {
+                Debug.Log($"🔴 Restart Button hit by bullet! Bullet active: {bullet.gameObject.activeInHierarchy}");
+                OnButtonHit();
+            }
+            else
+            {
+                Debug.Log($"🔴 Triggered by {other.name} but not a bullet");
+            }
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+            if (isHit || !isArmed) return;
             if (other.GetComponent<Bullet>() != null)
             {
-                Debug.Log("🔴 Restart Button hit by bullet!");
+                Debug.Log("🔴 Restart Button registered hit on TriggerStay");
                 OnButtonHit();
             }
         }
         
-        private void OnCollisionEnter(Collision collision)
-        {
-            if (isHit) return;
-            
-            // Check if hit by bullet (check component instead of tag)
-            if (collision.gameObject.GetComponent<Bullet>() != null)
-            {
-                Debug.Log("🔴 Restart Button hit by bullet!");
-                OnButtonHit();
-            }
-        }
+        // Collision handler is not needed when using trigger; keeping only trigger path
         
         private void OnButtonHit()
         {

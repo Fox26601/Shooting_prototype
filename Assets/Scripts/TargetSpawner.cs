@@ -10,6 +10,11 @@ namespace ShootingSystem
         [SerializeField] private float targetSpacing = 2.5f;
         [SerializeField] private float respawnDelay = 1f; // Delay before respawning new targets
         
+        [Header("Moving Targets")]
+        [SerializeField] private bool spawnMovingTargets = true;
+        [SerializeField] private int movingTargetsCount = 1;
+        [SerializeField] private float movingTargetsDistance = 3f; // Distance behind regular targets
+        
         [Header("Line Spawn")]
         [SerializeField] private float lineLength = 10f;
         
@@ -162,7 +167,44 @@ namespace ShootingSystem
                 TargetPool.Instance.GetTarget(targetPosition);
                 Debug.Log($"🎯 Target {i + 1} spawned at position: {targetPosition}");
             }
+            
+            // Spawn moving targets behind regular targets
+            if (spawnMovingTargets && MovingTargetPool.Instance != null)
+            {
+                SpawnMovingTargets();
+            }
+            else if (spawnMovingTargets && MovingTargetPool.Instance == null)
+            {
+                Debug.LogWarning("⚠️ MovingTargetPool not found! Moving targets will not spawn.");
+            }
         }
+        
+        private void SpawnMovingTargets()
+        {
+            Vector3 basePosition = GetSpawnPosition();
+            Vector3 movingTargetsPosition = basePosition + Vector3.back * movingTargetsDistance;
+            
+            Debug.Log($"🎯 Spawning {movingTargetsCount} moving targets at position: {movingTargetsPosition}");
+            
+            for (int i = 0; i < movingTargetsCount; i++)
+            {
+                Vector3 spawnPosition = movingTargetsPosition + Vector3.right * (i * 3f); // Space them out
+                
+                // Get moving target from pool
+                MovingTarget movingTarget = MovingTargetPool.Instance?.GetMovingTarget(spawnPosition);
+                if (movingTarget != null)
+                {
+                    // Single moving target: prefer horizontal
+                    MovingTarget.MovementType movementType = MovingTarget.MovementType.Horizontal;
+                    
+                    movingTarget.SetMovementType(movementType);
+                    movingTarget.SetMovementParameters(2f, 4f, 3f); // speed, range, duration
+                    
+                    Debug.Log($"🎯 Moving target {i + 1} spawned with {movementType} movement at {spawnPosition}");
+                }
+            }
+        }
+        
         
         private Vector3 GetSpawnPosition()
         {

@@ -221,6 +221,9 @@ namespace ShootingSystem
         {
             if (hasFallen && other.gameObject.layer == Mathf.RoundToInt(Mathf.Log(groundLayer.value, 2)))
             {
+                // Play target landing sound effect
+                AudioManager.Instance?.PlayTargetLandingSound();
+                
                 // Target hit the ground, immediately remove from active count and trigger respawn
                 TargetPool.Instance?.RemoveFromActiveCount(this);
                 

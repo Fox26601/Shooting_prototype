@@ -13,6 +13,7 @@ namespace ShootingSystem
         [Header("References")]
         [SerializeField] private BulletPool bulletPool;
         [SerializeField] private TargetPool targetPool;
+        [SerializeField] private MovingTargetPool movingTargetPool;
         [SerializeField] private TargetSpawner targetSpawner;
         [SerializeField] private StaticCameraController cameraController;
         
@@ -66,12 +67,28 @@ namespace ShootingSystem
         
         private void InitializeGame()
         {
+            // Initialize AudioManager first
+            AudioManager.Instance?.SetMasterVolume(1f);
+            AudioManager.Instance?.SetSFXVolume(1f);
+            
             // Find components if not assigned
             if (bulletPool == null)
                 bulletPool = FindFirstObjectByType<BulletPool>();
             
             if (targetPool == null)
                 targetPool = FindFirstObjectByType<TargetPool>();
+            
+            if (movingTargetPool == null)
+            {
+                movingTargetPool = FindFirstObjectByType<MovingTargetPool>();
+                if (movingTargetPool == null)
+                {
+                    // Create MovingTargetPool GameObject if not found
+                    GameObject movingTargetPoolObj = new GameObject("Moving Target Pool");
+                    movingTargetPool = movingTargetPoolObj.AddComponent<MovingTargetPool>();
+                    Debug.Log("✅ MovingTargetPool created automatically");
+                }
+            }
             
             if (targetSpawner == null)
                 targetSpawner = FindFirstObjectByType<TargetSpawner>();
@@ -107,6 +124,16 @@ namespace ShootingSystem
                 Debug.Log("✅ TargetPool found and ready");
             }
             
+            if (movingTargetPool == null)
+            {
+                Debug.LogError("❌ MovingTargetPool not found! Moving targets will not spawn.");
+                allComponentsValid = false;
+            }
+            else
+            {
+                Debug.Log("✅ MovingTargetPool found and ready");
+            }
+            
             if (targetSpawner == null)
             {
                 Debug.LogError("❌ TargetSpawner not found! No targets will appear.");
@@ -125,6 +152,17 @@ namespace ShootingSystem
             else
             {
                 Debug.Log("✅ StaticCameraController found and ready");
+            }
+            
+            // Validate AudioManager
+            if (AudioManager.Instance == null)
+            {
+                Debug.LogError("❌ AudioManager not found! Sound effects will not play.");
+                allComponentsValid = false;
+            }
+            else
+            {
+                Debug.Log("✅ AudioManager found and ready");
             }
             
             if (allComponentsValid)
@@ -177,6 +215,11 @@ namespace ShootingSystem
             if (targetPool != null)
             {
                 targetPool.ReturnAllTargets();
+            }
+            
+            if (movingTargetPool != null)
+            {
+                movingTargetPool.ReturnAllMovingTargets();
             }
             
             Debug.Log($"Game Ended! Final Score: {currentScore}");

@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 5fdc129e466ec1747a945570839d5dfb
+guid: 68415348c38444a4583ea492326f1c72
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -26,7 +26,7 @@ ModelImporter:
     animationRotationError: 0.5
     animationPositionError: 0.5
     animationScaleError: 0.5
-    animationWrapMode: 0
+    animationWrapMode: 2
     extraExposedTransformPaths: []
     extraUserProperties: []
     clipAnimations: []
@@ -95,7 +95,7 @@ ModelImporter:
     skeletonHasParents: 1
   lastHumanDescriptionAvatarSource: {instanceID: 0}
   autoGenerateAvatarMappingIfUnspecified: 1
-  animationType: 2
+  animationType: 1
   humanoidOversampling: 1
   avatarSetup: 0
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1

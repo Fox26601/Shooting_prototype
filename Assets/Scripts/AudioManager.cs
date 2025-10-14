@@ -191,6 +191,13 @@ namespace ShootingSystem
         {
             AudioSource audioSource;
             
+            if (audioSourcePool == null)
+            {
+                // Pool not initialized yet, create structures defensively
+                audioSourcePool = new Queue<AudioSource>();
+                activeAudioSources = activeAudioSources ?? new List<AudioSource>();
+            }
+            
             if (audioSourcePool.Count > 0)
             {
                 audioSource = audioSourcePool.Dequeue();
@@ -208,6 +215,10 @@ namespace ShootingSystem
         private void ReturnAudioSource(AudioSource audioSource)
         {
             if (audioSource == null) return;
+            
+            // Ensure collections exist
+            if (activeAudioSources == null) activeAudioSources = new List<AudioSource>();
+            if (audioSourcePool == null) audioSourcePool = new Queue<AudioSource>();
             
             activeAudioSources.Remove(audioSource);
             audioSource.Stop();
@@ -341,7 +352,11 @@ namespace ShootingSystem
         /// </summary>
         public void StopAllSounds()
         {
-            foreach (AudioSource audioSource in activeAudioSources)
+            if (activeAudioSources == null || activeAudioSources.Count == 0) return;
+            
+            // Iterate over a snapshot to avoid modifying the collection while iterating
+            var snapshot = new List<AudioSource>(activeAudioSources);
+            foreach (AudioSource audioSource in snapshot)
             {
                 if (audioSource != null)
                 {
@@ -353,7 +368,12 @@ namespace ShootingSystem
         
         private void OnDestroy()
         {
+            // Stop and release safely
             StopAllSounds();
+            
+            // Clear references defensively
+            if (activeAudioSources != null) activeAudioSources.Clear();
+            if (audioSourcePool != null) audioSourcePool.Clear();
         }
     }
 }

@@ -11,7 +11,6 @@ namespace ShootingSystem
         [SerializeField] private TextMeshProUGUI gameStatusText;
         [SerializeField] private TextMeshProUGUI timerText;
         [SerializeField] private TextMeshProUGUI scoreText;
-        [SerializeField] private Button restartButton;
         
         private GameManager gameManager;
         private TargetPool targetPool;
@@ -21,10 +20,6 @@ namespace ShootingSystem
             gameManager = GameManager.Instance;
             targetPool = TargetPool.Instance;
             
-            if (restartButton != null)
-            {
-                restartButton.onClick.AddListener(OnRestartButtonClicked);
-            }
         }
         
         private void Update()

@@ -16,6 +16,9 @@ namespace ShootingSystem
         [SerializeField] private MovingTargetPool movingTargetPool;
         [SerializeField] private TargetSpawner targetSpawner;
         [SerializeField] private StaticCameraController cameraController;
+        [SerializeField] private PistolCameraController pistolCameraController;
+        [SerializeField] private PistolIntegration pistolIntegration;
+        [SerializeField] private RuntimeAnimationLoader runtimeAnimationLoader; // optional
         
         private bool isGameActive;
         private float currentGameTime;
@@ -96,9 +99,22 @@ namespace ShootingSystem
             if (cameraController == null)
                 cameraController = FindFirstObjectByType<StaticCameraController>();
             
+            // Find pistol camera controller
+            if (pistolCameraController == null)
+                pistolCameraController = FindFirstObjectByType<PistolCameraController>();
+            
+            
+            // Pistol уже настроен в сцене - не нужно искать дополнительные компоненты
+            Debug.Log("ℹ️ Pistol already configured in scene - no additional setup needed");
+            
+			// Создаем недостающие UI компоненты
+            CreateAmmoUI();
+			CreateRestartButtonSpawner();
+            
             // Validate all components for build
             ValidateComponents();
         }
+        
         
         private void ValidateComponents()
         {
@@ -144,15 +160,22 @@ namespace ShootingSystem
                 Debug.Log("✅ TargetSpawner found and ready");
             }
             
-            if (cameraController == null)
+            if (cameraController == null && pistolCameraController == null)
             {
-                Debug.LogError("❌ StaticCameraController not found! Camera controls will not work.");
-                allComponentsValid = false;
+                Debug.LogWarning("⚠️ No camera controller found! Creating PistolCameraController...");
+                CreatePistolCameraController();
             }
-            else
+            else if (pistolCameraController != null)
+            {
+                Debug.Log("✅ PistolCameraController found and ready");
+            }
+            else if (cameraController != null)
             {
                 Debug.Log("✅ StaticCameraController found and ready");
             }
+            
+            // Pistol уже настроен в сцене - валидация не нужна
+            Debug.Log("ℹ️ Pistol validation skipped - pistol already configured in scene");
             
             // Validate AudioManager
             if (AudioManager.Instance == null)
@@ -254,12 +277,59 @@ namespace ShootingSystem
             }
         }
         
-        private void OnDestroy()
+    private void CreatePistolCameraController()
+    {
+        // Ищем Pistol Instance в сцене
+        GameObject pistolInstance = GameObject.Find("Pistol Instance");
+        if (pistolInstance != null)
         {
-            if (Instance == this)
+            // Добавляем PistolCameraController к Pistol Instance
+            pistolCameraController = pistolInstance.GetComponent<PistolCameraController>();
+            if (pistolCameraController == null)
             {
-                Instance = null;
+                pistolCameraController = pistolInstance.AddComponent<PistolCameraController>();
+                Debug.Log("✅ PistolCameraController created and added to Pistol Instance");
             }
         }
+        else
+        {
+            Debug.LogError("❌ Pistol Instance not found! Cannot create PistolCameraController.");
+        }
+    }
+
+    private void CreateAmmoUI()
+    {
+        // Ищем AmmoUI в сцене
+        AmmoUI existingAmmoUI = FindFirstObjectByType<AmmoUI>();
+        if (existingAmmoUI == null)
+        {
+            // Создаем новый GameObject для AmmoUI
+            GameObject ammoUIObject = new GameObject("AmmoUI");
+            ammoUIObject.AddComponent<AmmoUI>();
+            Debug.Log("✅ AmmoUI created and added to scene");
+        }
+        else
+        {
+            Debug.Log("✅ AmmoUI already exists in scene");
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
+		private void CreateRestartButtonSpawner()
+		{
+			var existing = FindFirstObjectByType<RestartButtonSpawner>();
+			if (existing == null)
+			{
+				GameObject spawnerObject = new GameObject("Restart Button Spawner");
+				spawnerObject.AddComponent<RestartButtonSpawner>();
+			}
+		}
     }
 }

@@ -107,7 +107,7 @@ namespace ShootingSystem
             var restartButton = other.GetComponent<RestartButton>();
             if (restartButton != null)
             {
-                Debug.Log("🔴 Bullet hit Restart Button trigger");
+                Debug.Log("🔴 Bullet hit Restart Button trigger - returning to pool");
                 ReturnToPool();
                 return;
             }

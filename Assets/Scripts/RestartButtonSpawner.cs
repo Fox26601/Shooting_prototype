@@ -41,9 +41,9 @@ namespace ShootingSystem
             }
         }
         
-        private void SpawnRestartButton()
+		private void SpawnRestartButton()
         {
-            if (restartButtonPrefab == null || cameraTransform == null) return;
+			if (restartButtonPrefab == null) return;
             
             Vector3 spawnPosition = GetSpawnPosition();
             
@@ -57,11 +57,7 @@ namespace ShootingSystem
             var collider = currentButton.GetComponent<Collider>();
             if (collider == null) collider = currentButton.AddComponent<BoxCollider>();
             collider.isTrigger = true;
-            if (collider is BoxCollider box)
-            {
-                box.size = new Vector3(3f, 1.2f, 3f); // much deeper along Z to catch steep shots
-                box.center = new Vector3(0f, 0.6f, 1.5f);
-            }
+            // Size will be configured by RestartButton.ConfigureTriggerZone() in Awake()
             
             var rigid = currentButton.GetComponent<Rigidbody>();
             if (rigid == null) rigid = currentButton.AddComponent<Rigidbody>();

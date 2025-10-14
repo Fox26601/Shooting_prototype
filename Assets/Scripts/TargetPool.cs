@@ -141,6 +141,16 @@ namespace ShootingSystem
         
         public void ReturnTarget(Target target)
         {
+            if (target == null)
+            {
+                Debug.LogWarning("⚠️ ReturnTarget called with null target");
+                return;
+            }
+            if (activeTargets == null || targetPool == null)
+            {
+                Debug.LogWarning("⚠️ TargetPool not initialized; skipping ReturnTarget");
+                return;
+            }
             if (activeTargets.Contains(target))
             {
                 activeTargets.Remove(target);
@@ -166,10 +176,19 @@ namespace ShootingSystem
         
         public void ReturnAllTargets()
         {
+            if (activeTargets == null || targetPool == null)
+            {
+                Debug.LogWarning("⚠️ TargetPool not initialized; skipping ReturnAllTargets");
+                return;
+            }
             for (int i = activeTargets.Count - 1; i >= 0; i--)
             {
-                activeTargets[i].gameObject.SetActive(false);
-                ReturnTarget(activeTargets[i]);
+                var t = activeTargets[i];
+                if (t != null)
+                {
+                    t.gameObject.SetActive(false);
+                    ReturnTarget(t);
+                }
             }
         }
         

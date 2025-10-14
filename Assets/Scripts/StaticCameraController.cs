@@ -68,10 +68,20 @@ namespace ShootingSystem
             
             if (firePoint == null)
             {
-                GameObject firePointObj = new GameObject("FirePoint");
-                firePointObj.transform.SetParent(cameraTransform);
-                firePointObj.transform.localPosition = new Vector3(0, 0, 0.5f);
-                firePoint = firePointObj.transform;
+                // Try to find existing FirePoint in children
+                firePoint = cameraTransform.Find("FirePoint");
+                if (firePoint == null)
+                {
+                    firePoint = cameraTransform.Find("Muzzle");
+                }
+                if (firePoint == null)
+                {
+                    firePoint = cameraTransform.Find("Barrel");
+                }
+                // GameObject firePointObj = new GameObject("FirePoint");
+                // firePointObj.transform.SetParent(cameraTransform);
+                // firePointObj.transform.localPosition = new Vector3(0, 0, 0.5f);
+                // firePoint = firePointObj.transform;
             }
             
             // Create input actions manually
@@ -104,8 +114,8 @@ namespace ShootingSystem
                 playerCamera.fieldOfView = normalFOV;
             }
             
-            // Face the targets at scene start (assumes targets are on negative Z)
-            AlignToTargetsDirection();
+            // Face the targets at scene start (assumes targets are on negative Z) - DISABLED to preserve manual positioning
+            // AlignToTargetsDirection();
 
             // Initialize rotations
             Vector3 currentRotation = transform.eulerAngles;
@@ -176,6 +186,8 @@ namespace ShootingSystem
         
         private void HandleMouseLook()
         {
+            if (lookAction == null) return;
+            
             Vector2 lookInput = lookAction.ReadValue<Vector2>();
             
             // Apply sensitivity and invert Y if needed
